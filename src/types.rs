@@ -10,6 +10,18 @@ pub enum FtpError {
     InvalidAddress(::std::net::AddrParseError),
 }
 
+impl From<::std::io::Error> for FtpError {
+    fn from(err: ::std::io::Error) -> FtpError {
+        FtpError::ConnectionError(err)
+    }
+}
+
+impl From<::std::net::AddrParseError> for FtpError {
+    fn from(err: ::std::net::AddrParseError) -> FtpError {
+        FtpError::InvalidAddress(err)
+    }
+}
+
 pub type Result<T> = ::std::result::Result<T, FtpError>;
 
 /// Text Format Control used in `TYPE` command
@@ -31,6 +43,7 @@ pub enum FileType {
 }
 
 /// `Line` contains a command code and the contents of a line of text read from network
+#[derive(Debug)]
 pub struct Line(pub u32, pub String);
 
 impl ToString for FormatControl {

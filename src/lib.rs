@@ -8,3 +8,6 @@ mod ftp;
 mod data_stream;
 pub mod types;
 pub mod status;
+
+pub use ftp::FtpStream;
+pub use types::FtpError;
