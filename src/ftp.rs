@@ -1,4 +1,5 @@
-use std::io::{Read, Write, BufReader, BufWriter, BufRead,};
+use std::io as stdio;
+use std::io::{Read, Write, BufReader, BufWriter, BufRead, Stderr};
 use std::net::{TcpStream, SocketAddr, ToSocketAddrs};
 use regex::Regex;
 use super::status;
@@ -17,7 +18,7 @@ pub struct FtpStream {
 impl FtpStream {
     fn write_str(&mut self, s: &str) -> Result<()> {
         if cfg!(feature = "debug_print") {
-            print!("CMD {}", s);
+            try!(stdio::stderr().write_fmt(format_args!("CMD {}", s)));
         }
         let stream = self.bufStream.get_mut();
         
@@ -31,7 +32,7 @@ impl FtpStream {
         let mut line = String::new();
         try!(self.bufStream.read_line(&mut line));
         if cfg!(feature = "debug_print") {
-            print!("FTP {}", line);
+            try!(stdio::stderr().write_fmt(format_args!("FTP {}", line)));
         }
         if line.len() < 5 {
             return Err(FtpError::InvalidResponse("error: could not read reply code".to_owned()));
@@ -47,7 +48,7 @@ impl FtpStream {
             line.clear();
             try!(self.bufStream.read_line(&mut line));
             if cfg!(feature = "debug_print") {
-                print!("FTP {}", line);
+                try!(stdio::stderr().write_fmt(format_args!("FTP {}", line)));
             }
         }
 
