@@ -221,4 +221,37 @@ impl FtpStream {
             None => Ok(None),
         }
     }
+
+    fn data_command(&mut self, cmd: &str) -> Result<TcpStream> {
+        self.pasv()
+            .and_then(|addr| { self.write_str(cmd).map(|_| addr)})
+            .and_then(|addr| TcpStream::connect(addr).map_err(|err| FtpError::ConnectionError(err)))
+            .and_then(|stream| {
+                Ok(stream)
+            })
+    }
+
+    /// Retrives a file from server
+    pub fn retr<F>(&mut self, filename: &str, reader: F) -> Result<()>
+        where F: Fn(&mut Read) -> Result<()> {
+        let retr_cmd = format!("RETR {}\r\n", filename);
+        let mut stream = BufReader::new(try!(self.data_command(&retr_cmd)));
+
+        self.read_response_in(&[status::ABOUT_TO_SEND, status::ALREADY_OPEN])
+            .and_then(|_| {
+                let result = reader(&mut stream);
+                drop(stream);
+                try!(self.read_response(status::CLOSING_DATA_CONNECTION));
+
+                result
+            })
+    }
+
+    /// Retrives a file from server, the returned value is the stream which you can read data from
+    pub fn get(&mut self, filename: &str) -> Result<BufReader<TcpStream>> {
+        let retr_cmd = format!("RETR {}\r\n", filename);
+        let stream = BufReader::new(try!(self.data_command(&retr_cmd)));
+
+        self.read_response_in(&[status::ABOUT_TO_SEND, status::ALREADY_OPEN]).map(|_| stream)
+    }
 }

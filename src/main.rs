@@ -1,7 +1,12 @@
 extern crate FTPCLI;
 
+use std::fs::File;
+use std::io::Write;
+use std::io::Read;
+
 use FTPCLI::FtpStream;
 use FTPCLI::FtpError;
+use FTPCLI::status;
 
 fn main() {
     let mut ftpStream = FtpStream::connect("182.254.245.238:21").unwrap();
@@ -31,7 +36,36 @@ fn main() {
             None => println!("FILE NOT EXISTS"),
         }
     });
+    ftpStream.retr("sig_recv.c", |stream| {
+        let mut file = File::create("sig_recv.c").unwrap();
+        let mut buf = [0; 2048];
 
+        loop {
+            match stream.read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => {
+                    file.write_all(&mut buf[0 .. n]).unwrap()
+                },
+                Err(err) => return Err(FtpError::ConnectionError(err))
+            };
+        }
+
+        Ok(())
+    });
+
+    let mut reader = ftpStream.get("sig_recv.c").unwrap();
+    let mut file = File::create("sig_recv2.c").unwrap();
+    let mut buf = [0; 2048];
+    loop {
+        match reader.read(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => file.write_all(&mut buf[0 .. n]).unwrap(),
+            Err(err) => println!("{:?}", err),
+        }
+    }
+    // have to read response
+    ftpStream.read_response(status::CLOSING_DATA_CONNECTION).unwrap();
+    drop(reader);
     // ftpStream.rm("test.txt").unwrap();
     ftpStream.quit().unwrap();
 }
