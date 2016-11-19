@@ -10,3 +10,7 @@ lazy_static = "0.2.2"
 
 [features]
 debug_print = []
+
+[[bin]]
+doc = false
+name = "ftp"
