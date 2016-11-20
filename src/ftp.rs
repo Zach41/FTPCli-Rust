@@ -1,5 +1,5 @@
 use std::io as stdio;
-use std::io::{Read, Write, BufReader, BufWriter, BufRead, Stderr};
+use std::io::{Read, Write, BufReader, BufWriter, BufRead, Stderr,copy};
 use std::net::{TcpStream, SocketAddr, ToSocketAddrs};
 use std::str::FromStr;
 use regex::Regex;
@@ -56,6 +56,7 @@ impl FtpStream {
             }
         }
 
+        print!("{}", line);
         if expected_codes.into_iter().any(|ec| code == *ec) {
             Ok(Line(code, line))
         } else {
@@ -97,6 +98,23 @@ impl FtpStream {
                 }
                 Ok(())
             })
+    }
+
+    pub fn user(&mut self, username: &str) -> Result<()> {
+        let user_cmd = format!("USER {}\r\n", username);
+        try!(self.write_str(&user_cmd));
+
+        try!(self.read_response_in(&[status::LOGGED_IN, status::NEED_PASSWORD]));
+
+        Ok(())
+    }
+
+    pub fn pass(&mut self, password: &str) -> Result<()> {
+        let pass_cmd = format!("PASS {}\r\n", password);
+        try!(self.write_str(&pass_cmd));
+        try!(self.read_response(status::LOGGED_IN));
+
+        Ok(())
     }
 
     /// Change the current working directory
@@ -212,6 +230,20 @@ impl FtpStream {
         try!(self.write_str(&rm_cmd));
 
         self.read_response(status::REQUESTED_FILE_ACTION_OK).map(|_| ())
+    }
+
+    fn put_file<R: Read>(&mut self, filename: &str, r: &mut R) -> Result<()> {
+        let store_cmd = format!("STOR {}\r\n", filename);
+        let mut data_stream = BufWriter::new(try!(self.data_command(&store_cmd)));
+        try!(self.read_response_in(&[status::ALREADY_OPEN, status::ABOUT_TO_SEND]));
+
+        try!(copy(r, &mut data_stream));
+        Ok(())
+    }
+
+    pub fn put<R: Read>(&mut self, filename: &str, r: &mut R) -> Result<()> {
+        try!(self.put_file(filename, r));
+        self.read_response(status::CLOSING_DATA_CONNECTION).map(|_| (()))
     }
 
     /// Gets the size of file in bytes, if file doesn't exists, return None
