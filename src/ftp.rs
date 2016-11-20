@@ -77,7 +77,9 @@ impl FtpStream {
                 };
 
                 ftp_stream.read_response(status::READY)
-                    .map(|_| ftp_stream)
+                    .map(|_| {
+                        ftp_stream
+                    })
             })
     }
 

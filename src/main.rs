@@ -1,93 +1,57 @@
 extern crate FTPCLI;
 extern crate chrono;
+extern crate rpassword;
 
+use std::io as stdio;
 use std::fs::File;
 use std::io::Write;
 use std::io::Read;
-use chrono::{DateTime, UTC, TimeZone, Timelike, Datelike};
+use std::process::exit;
+use std::env;
+use std::net::{ToSocketAddrs};
+use chrono::{Timelike, Datelike};
+use rpassword::prompt_password_stdout;
 
 use FTPCLI::FtpStream;
 use FTPCLI::FtpError;
 use FTPCLI::status;
 
-fn main() {
-    let mut ftpStream = FtpStream::connect("182.254.245.238:21").unwrap();
-
-    ftpStream.login("zach", "admin123123").unwrap();
-
-    // ftpStream.cwd("~/hello").unwrap();
-
-    // ftpStream.cdup().unwrap();
-
-    ftpStream.pwd().map(|pwd| println!("{}", pwd));
-
-    ftpStream.noop().unwrap();
-
-    ftpStream.mkdri("hello2");
+fn cmd_loop() -> Vec<String> {
+    println!("ftp> ");
     
-    ftpStream.pasv().unwrap();
+    let mut cmd_line = String::new();
+    stdio::stdin().read_to_string(&mut cmd_line).unwrap();
 
-    ftpStream.rename("hello2", "hello");
+    cmd_line.split(' ').into_iter()
+        .map(|s| String::from(s))
+        .filter(|s| s.len() > 0).collect()
+}
 
-    // ftpStream.rmdir("hello").unwrap();
+fn login(ftp_stream: &mut FtpStream) {
+    print!("Name: ");
+    let mut name: String = String::new();
+    // let mut passwd: String = String::new();
 
-    ftpStream.size("demo.c").unwrap();
-    ftpStream.size("hello.txt").map(|ret| {
-        match ret {
-            Some(size) => println!("FILE SIZE: {}", size),
-            None => println!("FILE NOT EXISTS"),
-        }
-    });
-    ftpStream.retr("sig_recv.c", |stream| {
-        let mut file = File::create("sig_recv.c").unwrap();
-        let mut buf = [0; 2048];
+    println!("Name: ");
+    stdio::stdin().read_line(&mut name).unwrap();
+    let passwd = prompt_password_stdout("Password: ").unwrap();
 
-        loop {
-            match stream.read(&mut buf) {
-                Ok(0) => break,
-                Ok(n) => {
-                    file.write_all(&mut buf[0 .. n]).unwrap()
-                },
-                Err(err) => return Err(FtpError::ConnectionError(err))
-            };
-        }
+    match ftp_stream.login(&name, &passwd) {
+        Ok(()) => println!("Login successfully"),
+        Err(err) => println!("Login failed: {}", err.to_string()),
+    }
+}
 
-        Ok(())
-    });
-
-    let mut reader = ftpStream.get("sig_recv.c").unwrap();
-    let mut file = File::create("sig_recv2.c").unwrap();
-    let mut buf = [0; 2048];
-    loop {
-        match reader.read(&mut buf) {
-            Ok(0) => break,
-            Ok(n) => file.write_all(&mut buf[0 .. n]).unwrap(),
-            Err(err) => println!("{:?}", err),
+fn connect(ip: &str, port: u32) -> Option<FtpStream> {
+    let addr = format!("{}:{}", ip, port);
+    match FtpStream::connect(&addr[..]) {
+        Ok(stream) => Some(stream),
+        Err(err) => {
+            println!("Connection Failed: {}", err.to_string());
+            None
         }
     }
-    // have to read response
-    ftpStream.read_response(status::CLOSING_DATA_CONNECTION).unwrap();
-    drop(reader);
-    // ftpStream.rm("test.txt").unwrap();
+}
 
-    let lines = ftpStream.list(None).unwrap();
-    for line in lines {
-        println!("{}", line);
-    }
-
-    let lines = ftpStream.nlist(None).unwrap();
-    for line in lines {
-        println!("{}", line);
-    }
-
-    let datetime = ftpStream.mdtm("sig_recv.c").unwrap();
-    match datetime {
-        Some(time) => {
-            println!("{}.{}.{} {}:{}", time.year(), time.month(), time.day(), time.hour(), time.minute());
-        },
-        None => {
-            println!("Could not get file modification time");
-        }
-    }
-    ftpStream.quit().unwrap();
+fn main() {
 }
