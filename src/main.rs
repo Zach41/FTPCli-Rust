@@ -1,8 +1,10 @@
 extern crate FTPCLI;
+extern crate chrono;
 
 use std::fs::File;
 use std::io::Write;
 use std::io::Read;
+use chrono::{DateTime, UTC, TimeZone, Timelike, Datelike};
 
 use FTPCLI::FtpStream;
 use FTPCLI::FtpError;
@@ -67,5 +69,25 @@ fn main() {
     ftpStream.read_response(status::CLOSING_DATA_CONNECTION).unwrap();
     drop(reader);
     // ftpStream.rm("test.txt").unwrap();
+
+    let lines = ftpStream.list(None).unwrap();
+    for line in lines {
+        println!("{}", line);
+    }
+
+    let lines = ftpStream.nlist(None).unwrap();
+    for line in lines {
+        println!("{}", line);
+    }
+
+    let datetime = ftpStream.mdtm("sig_recv.c").unwrap();
+    match datetime {
+        Some(time) => {
+            println!("{}.{}.{} {}:{}", time.year(), time.month(), time.day(), time.hour(), time.minute());
+        },
+        None => {
+            println!("Could not get file modification time");
+        }
+    }
     ftpStream.quit().unwrap();
 }
