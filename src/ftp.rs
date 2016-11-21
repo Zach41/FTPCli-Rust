@@ -1,12 +1,12 @@
 use std::io as stdio;
-use std::io::{Read, Write, BufReader, BufWriter, BufRead, Stderr,copy};
+use std::io::{Read, Write, BufReader, BufWriter, BufRead, copy};
 use std::net::{TcpStream, SocketAddr, ToSocketAddrs};
 use std::str::FromStr;
 use regex::Regex;
 use chrono::{DateTime, UTC};
 use chrono::TimeZone;
 use super::status;
-use super::types::{FileType, FtpError, Line, Result};
+use super::types::{FtpError, Line, Result};
 
 lazy_static! {
     static ref PORT_RE: Regex = Regex::new(r"\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)").unwrap();

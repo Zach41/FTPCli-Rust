@@ -5,7 +5,7 @@ extern crate rpassword;
 
 use std::io as stdio;
 use std::fs::File;
-use std::io::{Read, Write, BufReader};
+use std::io::{Write, BufReader};
 use std::process::exit;
 use std::env;
 use std::iter::Iterator;
@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use chrono::{Timelike, Datelike};
 use rpassword::prompt_password_stdout;
 
-use FTPCLI::{FtpStream, FtpError, status};
+use FTPCLI::{FtpStream, FtpError};
 
 lazy_static! {
     static ref CMD_SET: Vec<&'static str> = {
