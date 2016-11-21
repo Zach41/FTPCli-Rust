@@ -14,4 +14,4 @@ debug_print = []
 
 [[bin]]
 doc = false
-name = "ftp"
+name = "zftp"

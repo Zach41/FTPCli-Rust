@@ -159,7 +159,7 @@ impl FtpStream {
     }
 
     /// Creates a new directory
-    pub fn mkdri(&mut self, path: &str) -> Result<()> {
+    pub fn mkdir(&mut self, path: &str) -> Result<()> {
         let mkdir_cmd = format!("MKD {}\r\n", path);
         try!(self.write_str(&mkdir_cmd));
 

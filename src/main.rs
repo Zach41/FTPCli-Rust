@@ -28,7 +28,13 @@ lazy_static! {
         cmds.push("cd");
         cmds.push("help");
         cmds.push("cdup");
-
+        cmds.push("mkdir");
+        cmds.push("rmdir");
+        cmds.push("delete");
+        cmds.push("size");
+        cmds.push("nlist");
+        cmds.push("modtime");
+        
         cmds
     };
     
@@ -43,14 +49,20 @@ lazy_static! {
         map.insert("cd", "change remote working directory");
         map.insert("help", "print local help information");
         map.insert("cdup", "change remote working directory to parent directory");
-
+        map.insert("mkdir", "make directory on the remote machine");
+        map.insert("rmdir", "remove directory on the remote machine");
+        map.insert("delete", "delete remote file");
+        map.insert("size", "show the size of remote file");
+        map.insert("nlist", "nlist contents of remote directory");
+        map.insert("modtime", "show last modification time of remote file");
+        
         map
     };
 }
 
 
 fn cmd_loop(ftp_stream: &mut FtpStream) -> ! {
-    'looper: loop {        
+    'looper: loop {
         print!("ftp> ");
         stdio::stdout().flush().unwrap();
         
@@ -146,6 +158,57 @@ fn cmd_loop(ftp_stream: &mut FtpStream) -> ! {
                     Err(_) => println!("cdup command failed"),
                 }
             },
+            "mkdir" => {
+                match cmds.capacity() {
+                    1 => println!("Invalid arguements"),
+                    _ => {
+                        match ftp_stream.mkdir(&cmds[1]) {
+                            Ok(()) => (()),
+                            Err(_) => println!("mkdir command failed"),
+                        }
+                    },
+                }
+            },
+            "rmdir" => {
+                match cmds.capacity() {
+                    1 => println!("Invalid arguements"),
+                    _ => {
+                        match ftp_stream.rmdir(&cmds[1]) {
+                            Ok(()) => (()),
+                            Err(_) => println!("rmdir command failed"),
+                        }
+                    }
+                }
+            },
+            "delete" => {
+                match cmds.capacity() {
+                    1 => println!("Invalid arguements"),
+                    _ => {
+                        match ftp_stream.rm(&cmds[1]) {
+                            Ok(()) => (()),
+                            Err(_) => println!("delete command failed"),
+                        }
+                    }
+                }
+            },
+            "size" => {
+                match cmds.capacity() {
+                    1 => println!("Invalid arguements"),
+                    _ => size(ftp_stream, &cmds[1]),
+                }
+            },
+            "nlist" => {
+                match cmds.capacity() {
+                    1 => nlist(ftp_stream, None),
+                    _ => nlist(ftp_stream, Some(&cmds[1])),
+                }
+            },
+            "modtime" => {
+                match cmds.capacity() {
+                    1 => println!("Invalid arguements"),
+                    _ => modtime(ftp_stream, &cmds[1]),
+                }
+            },
             _ => {
                 println!("Invalid command or not implemented!");
             }
@@ -234,6 +297,53 @@ fn put(ftp_stream: &mut FtpStream, src: &str, desc: &str) {
         }
         Err(err) => println!("open file failed: {}", err.to_string())
     };
+}
+
+fn size(ftp_stream: &mut FtpStream, filename: &str) {
+    match ftp_stream.size(filename) {
+        Ok(opsize) => {
+            match opsize {
+                Some(size) => println!("{}: {}", filename, size),
+                None => println!("no such file or directory"),
+            }
+        }
+        Err(_) => println!("size command failed"),
+    }
+}
+
+fn nlist(ftp_stream: &mut FtpStream, pathname: Option<&str>) {
+    match ftp_stream.nlist(pathname) {
+        Ok(files) => {
+            let mut cnt = 0;
+            for file in files {
+                print!("{}\t", file);
+                cnt += 1;
+                if cnt % 8 == 0 {
+                    print!("\n");
+                }                
+            }
+            if cnt % 8 != 0 {
+                print!("\n");
+            }
+        }
+        Err(_) => println!("nlist command failed"),
+    }
+}
+
+fn modtime(ftp_stream: &mut FtpStream, filename: &str) {
+    match ftp_stream.mdtm(filename) {
+        Ok(optime) => {
+            match optime {
+                Some(time) => {
+                    println!("{} {}/{}/{} {}:{}:{} GMT", filename,
+                             time.day(), time.month(), time.year(),
+                             time.hour(), time.minute(), time.second());
+                },
+                None => (()),
+            }
+        },
+        Err(_) => println!("modtime command error"),
+    }
 }
 
 fn main() {
